@@ -1,19 +1,16 @@
 package io.github.licenseplatecompose
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.res.colorResource
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.focus.focusModifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import io.github.linkedmonkeys.State
 
@@ -78,11 +75,14 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            Column {
-//                BuildStatusText()
-                BuildStateButtons(stateList)
+            // This should probably be factored into another composable function,
+            // called from within the Surface.
+            Surface {
+                OverallUI();
             }
         }
+    }
+
 //        setContent {
 //            LicensePlateComposeTheme {
 //                // A surface container using the 'background' color from the theme
@@ -94,7 +94,21 @@ class MainActivity : ComponentActivity() {
 //                }
 //            }
 //        }
+
+    @Composable
+    fun OverallUI() {
+        var labelText by remember { mutableStateOf("No state name") }
+
+        Column(
+            modifier = Modifier.fillMaxHeight(),
+            verticalArrangement = Arrangement.SpaceAround
+        ) {
+            BuildStateButtons(stateList = stateList,
+                clickHandler = { stateName: String -> labelText = stateName })
+            Text(text = labelText.toString())
+        }
     }
+
 
 //    var statusText by mutableStateOf("Status text")
 //
@@ -107,82 +121,52 @@ class MainActivity : ComponentActivity() {
 //    }
 
     @Composable
-// Change the params for a State object later.
-    fun StateButton(state: State) {
+    fun BuildStateButtons(stateList: List<State>, clickHandler: (String) -> Unit) {
+        var i = 0
+        for (row in 1..10) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceAround
+            )
+            {
+                for (col in 1..5) {
+                    val stateName: String = stateList[i].name
+                    StateButton(stateList[i], clickHandler = { clickHandler(stateName) })
+                    // This version of the call seemed to have the parameter lazily evaluated.
+                    // It caused index out of bounds since i is 50 later.
+                    // StateButton(stateList[i], clickHandler = { clickHandler(stateList[i].name) })
+                    Log.d("TAG", "r=$row, c=$col, i=$i")
+                    i++
+                }
+            }
+        }
+    }
+
+    @Composable
+    fun StateButton(state: State, clickHandler: () -> Unit) {
+        var buttonColorState = remember { mutableStateOf(true) }
+
         Button(
             // Make the textview read the name.
-            onClick = {},
-            //colors = ButtonDefaults.buttonColors(backgroundColor = colorResource(id = R.color.purple_500)),
-            border = BorderStroke(
-                1.dp,
-                color = colorResource(id = R.color.black)
+            onClick = {
+                clickHandler()
+                buttonColorState.value = !buttonColorState.value
+            },
+//                Toast.makeText(this, "Button Clicked: ${state.name}", Toast.LENGTH_SHORT).show()
+//                buttonColorState.value = !buttonColorState.value
+//            },
+            colors = ButtonDefaults.buttonColors(
+                backgroundColor = if (buttonColorState.value) Color.Red else Color.Blue,
+                contentColor = Color.White
             )
+            //colors = ButtonDefaults.buttonColors(backgroundColor = colorResource(id = R.color.purple_500)),
+//            border = BorderStroke(
+//                1.dp,
+//                color = colorResource(id = R.color.black)
+//            )
         )
         {
             Text(state.abbreviation)
-        }
-    }
-
-    @Composable
-    fun BuildStateButtons(stateList: List<State>) {
-        Column {
-            var i = 0
-            for (row in 1..10) {
-                Row {
-                    for (col in 1..5) {
-                        StateButton(stateList[i])
-                        i++
-                    }
-                }
-            }
-        }
-    }
-
-    //////////////////////////////////////////////////////////////////////
-    // Below this line is code modified from the Jetpack Compose Tutorial.
-    // https://developer.android.com/jetpack/compose/tutorial
-    //////////////////////////////////////////////////////////////////////
-    @Preview
-    @Composable
-    fun PreviewMessageCard() {
-        MessageCard(
-            msg = Message("Colleague", "Hey, take a look at ...")
-        )
-    }
-
-
-    data class Message(val author: String, val body: String)
-
-    @Composable
-    fun MessageCard(msg: Message) {
-        Column {
-            for (row in 1..3) {
-                Row(modifier = Modifier.padding(all = 8.dp)) {
-                    for (col in 1..3) {
-                        Image(
-                            painter = painterResource(id = R.drawable.profile_picture),
-                            contentDescription = "Content profile picture",
-                            modifier = Modifier
-                                // Set image size to 40dp
-                                .size(40.dp)
-                                // Clip image to be shaped as a circle.
-                                .clip(CircleShape)
-                        )
-
-
-                        Spacer(modifier = Modifier.width(8.dp))
-
-                        Column {
-                            Text(msg.author)
-                            // Add a vertical space between the author and the message.
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(msg.body)
-
-//                        StateButton("Arkansas", "AR")
-                        }
-                    }
-                }
-            }
         }
     }
 }
